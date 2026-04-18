@@ -1,36 +1,24 @@
-"use client";
+import { createClient } from "@/lib/supabaseServer";
+import LogoutButton from "@/components/logout-button";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+export default async function Dashboard() {
+  const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function Dashboard() {
-  const supabase = createClient();
-  const router = useRouter();
-  const [name, setName] = useState<string | null>(null);
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logged out");
-    router.push("/login");
-  };
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setName(data.user?.user_metadata?.full_name || "User");
-    };
-
-    getUser();
-  }, []);
+  const name = user?.user_metadata?.full_name || "User";
 
   return (
-    <div>
-        
-      <h1>Welcome, {name} 👋</h1>
-      <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg" onClick={handleLogout}>
-        Logout
-      </button>
+    <div className="p-6">
+      <h1 className="text-xl font-bold">
+        Welcome, {name} 👋
+      </h1>
+
+      <div className="mt-4">
+        <LogoutButton />
+      </div>
     </div>
   );
 }
