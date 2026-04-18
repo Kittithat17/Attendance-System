@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 
 import { MapPin, Camera } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -38,7 +39,19 @@ export default async function Dashboard() {
     .gte("created_at", startIso) // ใช้ค่าที่คำนวณจาก Timezone ไทย
     .lte("created_at", endIso)
     .order("created_at", { ascending: false });
+  //check user
+  if (!user) {
+    redirect("/login");
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("face_descriptor")
+    .eq("id", user.id)
+    .single();
 
+  if (!profile?.face_descriptor) {
+    redirect("/register-face");
+  }
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -122,15 +135,22 @@ export default async function Dashboard() {
                       >
                         {isCheckIn ? "🟢 Check-in" : "🔴 Check-out"}
                       </p>
-
-                      <p className="text-xs text-muted-foreground">
-                       
-                        {bangkokTime.toLocaleTimeString("th-TH", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })}
-                      </p>
+                      <div className="flex space-x-1">
+                        <p className="text-xs text-muted-foreground">
+                          {bangkokTime.toLocaleDateString("th-TH", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {bangkokTime.toLocaleTimeString("th-TH", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })}
+                        </p>
+                      </div>
                     </div>
 
                     <span className="text-xs px-2 py-1 bg-muted rounded">
@@ -140,6 +160,20 @@ export default async function Dashboard() {
                 );
               })
             )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Notice</CardTitle>
+            <CardDescription>Important usage information</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              หากการสแกนใบหน้าไม่สำเร็จในการกดครั้งถัดไป กรุณารอประมาณ 1–2 นาที
+              แล้วลองใหม่อีกครั้ง
+              เพื่อให้ระบบกล้องและการประมวลผลกลับมาทำงานได้อย่างเสถียร
+            </p>
           </CardContent>
         </Card>
       </div>

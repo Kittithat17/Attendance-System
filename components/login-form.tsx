@@ -27,31 +27,46 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      router.push("/dashboard");
-
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Login failed");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+      
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+      
+          if (error) throw error;
+      
+          const user = data.user;
+      
+          // ✅ เช็ค face
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("face_descriptor")
+            .eq("id", user.id)
+            .single();
+      
+          if (!profile?.face_descriptor) {
+            router.push("/register-face"); 
+          } else {
+            router.push("/dashboard");
+          }
+      
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            setError(err.message);
+          } else {
+            setError("Login failed");
+          }
+        } finally {
+          setLoading(false);
+        }
+      };
+    
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>

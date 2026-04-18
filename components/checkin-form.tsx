@@ -1,8 +1,9 @@
+//app/components/checkin-form.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
-import { createClient } from "@/lib/supabaseClient";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +20,26 @@ export default function CheckinForm() {
   const [type, setType] = useState("check-in");
   const [period, setPeriod] = useState("morning");
   const [loading, setLoading] = useState(false);
-
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  useEffect(() => {
+    let stream: MediaStream;
 
-  // ✅ โหลด model
+    navigator.mediaDevices.getUserMedia({ video: true }).then((s) => {
+      stream = s;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    });
+
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  // โหลด model
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = "/models";
@@ -32,32 +47,25 @@ export default function CheckinForm() {
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
       await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+      setModelsLoaded(true); 
     };
 
     loadModels();
   }, []);
 
-  // ✅ เปิดกล้อง
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+  function getLocation() {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        timeout: 15000,
+      });
     });
-  }, []);
-
-  // 🧠 compare function
-  function euclideanDistance(a: number[], b: number[]) {
-    return Math.sqrt(
-      a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0)
-    );
   }
 
   const handleSubmit = async () => {
     setLoading(true);
 
     try {
-      // 🧠 detect face
       const detection = await faceapi
         .detectSingleFace(
           videoRef.current!,
@@ -72,56 +80,55 @@ export default function CheckinForm() {
 
       const inputDescriptor = Array.from(detection.descriptor);
 
-      // 🧠 ดึง face จาก DB
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("face_descriptor")
-        .single();
-
-      if (!profile?.face_descriptor) {
-        throw new Error("No registered face");
+      const resCheck = await fetch("/api/check-face", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ descriptor: inputDescriptor }),
+      });
+      
+      if (!resCheck.ok) {
+        throw new Error("Face verification failed");
       }
+      const checkData = await resCheck.json();
 
-      // 🧠 compare
-      const distance = euclideanDistance(
-        inputDescriptor,
-        profile.face_descriptor
-      );
-
-      if (distance > 0.6) {
+      if (!checkData.success) {
         throw new Error("Face not matched ❌");
       }
-
+      
       // 📍 location
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            const res = await fetch("/api/attendance", {
-              method: "POST",
-              body: JSON.stringify({
-                type,
-                period,
-                latitude: pos.coords.latitude,
-                longitude: pos.coords.longitude,
-              }),
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-
-            toast.success("Check-in success ✅");
-            router.refresh();
-          } catch (err: any) {
-            toast.error(err.message);
-          } finally {
-            setLoading(false);
-          }
-        },
-        () => {
-          toast.error("Location permission denied");
-          setLoading(false);
-        }
-      );
+      try {
+        const pos = await getLocation();
+      
+        const res = await fetch("/api/attendance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type,
+            period,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        });
+      
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      
+        toast.success("Check-in success ✅");
+        router.refresh();
+        setReady(false);
+        setTimeout(() => {
+            setReady(true);
+          }, 1500);
+      
+      } catch (err: any) {
+        toast.error(err.message || "Location failed");
+      } finally {
+        setLoading(false);
+      }
     } catch (err: any) {
       toast.error(err.message);
       setLoading(false);
@@ -164,7 +171,7 @@ export default function CheckinForm() {
         </Select>
 
         {/* BUTTON */}
-        <Button onClick={handleSubmit} disabled={loading}>
+        <Button onClick={handleSubmit} disabled={loading || !modelsLoaded || !ready}>
           {loading ? (
             <>
               <Loader2 className="animate-spin mr-2 w-4 h-4" />

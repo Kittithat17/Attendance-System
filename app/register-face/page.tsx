@@ -6,11 +6,27 @@ import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
 import { createClient } from "@/lib/supabaseClient";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function RegisterFace() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    let stream: MediaStream;
+  
+    navigator.mediaDevices.getUserMedia({ video: true }).then((s) => {
+      stream = s;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    });
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   // โหลด model
   useEffect(() => {
@@ -25,14 +41,7 @@ export default function RegisterFace() {
     loadModels();
   }, []);
 
-  // เปิดกล้อง
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    });
-  }, []);
+  
 
   const handleCapture = async () => {
     setLoading(true);
@@ -66,6 +75,7 @@ export default function RegisterFace() {
       if (error) throw error;
 
       toast.success("Face registered ✅");
+      router.push("/dashboard");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -74,7 +84,7 @@ export default function RegisterFace() {
   };
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-4">
       <video
         ref={videoRef}
         autoPlay
