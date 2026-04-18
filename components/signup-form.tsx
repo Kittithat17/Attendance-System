@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
-  Field, FieldDescription, FieldGroup, FieldLabel,
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -33,42 +40,42 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (form.password !== form.confirm) {
-      return setError("Passwords do not match");
+      return toast.error("Passwords do not match");
     }
 
     if (form.password.length < 8) {
-      return setError("Password must be at least 8 characters");
+      return toast.error("Password must be at least 8 characters");
     }
 
     setLoading(true);
 
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            full_name: form.name,
-          },
+    const promise = supabase.auth.signUp({
+      email: form.email.trim(),
+      password: form.password,
+      options: {
+        data: {
+          full_name: form.name,
         },
-      });
+      },
+    });
 
-      if (error) throw error;
+    toast.promise(promise, {
+      loading: "Creating account...",
+      success: () => {
+        router.push("/login");
+        return "Account created 🎉";
+      },
+      error: (err) => err.message || "Signup failed",
+    });
 
-      // redirect after signup
-      router.push("/dashboard");
-
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Something went wrong");
-      }
+    try {
+      await promise;
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Card {...props}>
@@ -82,7 +89,6 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
       <CardContent>
         <form onSubmit={handleSubmit}>
           <FieldGroup>
-
             <Field>
               <FieldLabel>Full Name</FieldLabel>
               <Input
@@ -122,9 +128,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
               />
             </Field>
 
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
 
             <Field>
               <Button type="submit" disabled={loading} className="w-full">
@@ -135,7 +139,6 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 Already have an account? <a href="/login">Sign in</a>
               </FieldDescription>
             </Field>
-
           </FieldGroup>
         </form>
       </CardContent>
