@@ -1,3 +1,4 @@
+//app/components/signup-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -40,38 +41,46 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (form.password !== form.confirm) {
       return toast.error("Passwords do not match");
     }
-
+  
     if (form.password.length < 8) {
       return toast.error("Password must be at least 8 characters");
     }
-
+  
     setLoading(true);
-
-    const promise = supabase.auth.signUp({
-      email: form.email.trim(),
-      password: form.password,
-      options: {
-        data: {
-          full_name: form.name,
-        },
-      },
-    });
-
-    toast.promise(promise, {
-      loading: "Creating account...",
-      success: () => {
-        router.push("/login");
-        return "Account created 🎉";
-      },
-      error: (err) => err.message || "Signup failed",
-    });
-
+  
     try {
-      await promise;
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email.trim(),
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.name,
+          },
+        },
+      });
+  
+      if (error) throw error;
+  
+      // 🔥 create profile หลัง signup สำเร็จ
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+          });
+  
+        if (profileError) throw profileError;
+      }
+  
+      toast.success("Account created 🎉");
+      router.push("/login");
+  
+    } catch (err: any) {
+      toast.error(err.message || "Signup failed");
     } finally {
       setLoading(false);
     }
