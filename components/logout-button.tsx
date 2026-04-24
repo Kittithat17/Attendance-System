@@ -1,3 +1,4 @@
+//app/components/logout-button.tsx
 "use client";
 
 import { createClient } from "@/lib/supabaseClient";

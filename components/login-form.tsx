@@ -1,3 +1,4 @@
+//app/components/login-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -85,6 +86,7 @@ export function LoginForm({
               <Field>
                 <FieldLabel>Email</FieldLabel>
                 <Input
+                  data-testid="email-input"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -95,6 +97,7 @@ export function LoginForm({
               <Field>
                 <FieldLabel>Password</FieldLabel>
                 <Input
+                  data-testid="password-input"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
