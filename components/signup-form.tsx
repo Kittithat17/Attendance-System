@@ -101,6 +101,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
             <Field>
               <FieldLabel>Full Name</FieldLabel>
               <Input
+                data-testid="fullname-input"
                 value={form.name}
                 onChange={(e) => onChange("name", e.target.value)}
                 required
@@ -110,6 +111,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
             <Field>
               <FieldLabel>Email</FieldLabel>
               <Input
+                data-testid="email-input"
                 type="email"
                 value={form.email}
                 onChange={(e) => onChange("email", e.target.value)}
@@ -120,6 +122,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
             <Field>
               <FieldLabel>Password</FieldLabel>
               <Input
+                data-testid="password-input"
                 type="password"
                 value={form.password}
                 onChange={(e) => onChange("password", e.target.value)}
@@ -130,6 +133,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
             <Field>
               <FieldLabel>Confirm Password</FieldLabel>
               <Input
+                data-testid="confirm-password-input"
                 type="password"
                 value={form.confirm}
                 onChange={(e) => onChange("confirm", e.target.value)}
